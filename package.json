@@ -1,6 +1,6 @@
 {
   "name": "crash-notifier",
-  "description": "Application Crash Notifier",
+  "description": "Application crash and error notifier using AMQP for sending emails.",
   "version": "1.0.0",
   "main": "dist/main.js",
   "author": "lem",
