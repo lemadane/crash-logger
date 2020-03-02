@@ -1,7 +1,7 @@
 import { isString } from 'lodash';
 import * as redis from 'redis';
 import * as log from 'fancy-log';
-import { MethodFailure } from './err';
+import { SystemError } from './err';
 
 let redisClient: redis.RedisClient = null;
 
@@ -13,22 +13,22 @@ export const connect = async (): Promise<redis.RedisClient> => new Promise((reso
       }
       catch (error) {
          log.error('Could not connect to Redis...', error.message);
-         reject(new MethodFailure({ error, message: 'Could not connect to Redis cache.' }));
+         reject(new SystemError({ error, message: 'Could not connect to Redis cache.' }));
          return;
       }
    }
    resolve(redisClient);
 });
 
-export const disconnect = async () => {
-   if(!(redisClient && redisClient.connected)) {
+export const disconnect = async (): Promise<string> => {
+   if (!(redisClient && redisClient.connected)) {
       return 'OK';
    }
    return new Promise((resolve, reject) => {
       redisClient.quit((error, reply) => {
          if (error) {
             log.error(error.message);
-            reject(new MethodFailure({ error }));
+            reject(new SystemError({ error }));
             return;
          }
          resolve(reply);
@@ -36,7 +36,7 @@ export const disconnect = async () => {
    });
 };
 
-export const save = async (key: any, value: any) => {
+export const save = async (collection: string, id: string, value: any): Promise<number> => {
    let stringValue: string = null;
    const client = await connect();
    if (isString(value)) {
@@ -45,45 +45,24 @@ export const save = async (key: any, value: any) => {
       stringValue = JSON.stringify(value);
    }
    return new Promise((resolve, reject) => {
-      client.set(key.toString(), stringValue,
-         async (error, reply) => {
-            if (error) {
-               reject(new MethodFailure({ error }));
-            }
-            resolve(reply);
+      client.hset(collection, id, stringValue, (error, reply) => {
+         if (error) {
+            reject(new SystemError({ error }));
          }
+         resolve(reply);
+      }
       );
    });
 };
 
-export const saveExpire = async (key: any, value: any, seconds: number) => {
-   let stringValue: string = null;
-   const client = await connect();
-   if (isString(value)) {
-      stringValue = value;
-   } else {
-      stringValue = JSON.stringify(value);
-   }
-   return new Promise((resolve, reject) => {
-      client.setex(key.toString(), seconds, stringValue,
-         async (error, reply) => {
-            if (error) {
-               reject(new MethodFailure({ error }));
-               return;
-            }
-            resolve(reply);
-         }
-      );
-   });
-};
 
-export const read = async (key: any) => {
+export const read = async (collection: string, id: string): Promise<any> => {
    const client = await connect();
    return new Promise((resolve, reject) => {
-      client.get(key.toString(), async (error, data) => {
+      client.hget(collection, id, (error, data) => {
          if (error) {
             log.error(error.message);
-            reject(new MethodFailure({ error }));
+            reject(new SystemError({ error }));
             return;
          }
          if (data && data.startsWith('{')) {
@@ -95,27 +74,83 @@ export const read = async (key: any) => {
    });
 };
 
-export const drop = async (key: any) => {
+export const exists = async (collection: string, id: string): Promise<boolean> => {
    const client = await connect();
    return new Promise((resolve, reject) => {
-      client.del(key.toString(),
-         async (error, reply) => {
-            if (error) {
-               reject(new MethodFailure({ error }));
-               return;
-            }
-            resolve(reply);
+      client.hexists(collection, id, (error, reply) => {
+         if (error) {
+            log.error(error.message);
+            reject(new SystemError({ error }));
+            return;
          }
+         resolve(!!reply);
+      });
+   });
+};
+
+export const readAll = async (collection: string) => {
+   const client = await connect();
+   return new Promise((resolve, reject) => {
+      client.hgetall(collection, (error, data) => {
+         if (error) {
+            log.error(error.message);
+            reject(new SystemError({ error }));
+            return;
+         }
+         if (data) {
+            const obj = JSON.parse(JSON.stringify(data));
+            const results = Object.values(obj).map(value => {
+               const val = value as string;
+               if (val.startsWith('{')) {
+                  return JSON.parse(val);
+               } else {
+                  return value;
+               }
+            });
+            resolve(results);
+            //resolve(null);
+         } else {
+            resolve(data);
+         }
+      });
+   });
+};
+
+export const deleteByID = async (collection: string, id: string): Promise<boolean> => {
+   const client = await connect();
+   return new Promise((resolve, reject) => {
+      client.hdel(collection, id, (error, reply) => {
+         if (error) {
+            reject(new SystemError({ error }));
+            return;
+         }
+         resolve(!!reply);
+      }
       );
    });
 };
 
-export const clearCache = async () => {
+
+export const deleteAll = async (collection: string): Promise<boolean> => {
    const client = await connect();
    return new Promise((resolve, reject) => {
-      client.flushall( async (error, reply) => {
+      client.del(collection, (error, reply) => {
          if (error) {
-            reject(new MethodFailure({ message: error.message }));
+            reject(new SystemError({ error }));
+            return;
+         }
+         resolve(!!reply);
+      }
+      );
+   });
+};
+
+export const clearCache = async (): Promise<string> => {
+   const client = await connect();
+   return new Promise((resolve, reject) => {
+      client.flushall((error, reply) => {
+         if (error) {
+            reject(new SystemError({ message: error.message }));
          }
          else {
             resolve(reply);
@@ -123,16 +158,3 @@ export const clearCache = async () => {
       });
    });
 };
-
-// async function test() {
-//    const reply = await save('lem', 'hello');
-//    log('saved: ', reply);
-//    let data = await read('lem');
-//    log('data: ', data);
-//    await drop('lem');
-//    data = await read('lem');
-//    log('data: ', data);
-//    log('cleared: ', await clearCache());
-//    process.exit(0);
-// }
-// test();

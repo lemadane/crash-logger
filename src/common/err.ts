@@ -113,7 +113,7 @@ export class MethodFailure extends Exception {
    }
 }
 
-export class UnexpectedSystemError extends Exception {
+export class SystemError extends Exception {
    status = http.INTERNAL_SERVER_ERROR;
 
    title = 'System Error.';

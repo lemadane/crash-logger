@@ -6,10 +6,11 @@ export const create = async (req: Request, res: Response) => {
    try {
       const logged = req.body;
       const timestamp = new Date();
-      logged.key = timestamp.valueOf().toString();
+      logged.collection = 'logs',
+      logged.id = timestamp.valueOf().toString();
       logged.created = timestamp;
       logged.emailed = false;
-      await redis.save(logged.key, logged);
+      await redis.save('logs', logged.id, logged);
       res.status(CREATED).send({
          success: true,
          timestamp: logged.created,
@@ -27,8 +28,8 @@ export const create = async (req: Request, res: Response) => {
 
 export const getByID = async (req: Request, res: Response) => {
    try {
-      const key = req.params.id;
-      const read = await redis.read(key);
+      const id = req.params.id;
+      const read = await redis.read('logs', id);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
@@ -44,15 +45,53 @@ export const getByID = async (req: Request, res: Response) => {
    }
 };
 
-export const drop = async (req: Request, res: Response) => {
+
+export const getAll = async (_: Request, res: Response) => {
    try {
-      const key = req.params.id;
-      const data = await redis.read(key);
-      await redis.drop(key);
+      const logs = await redis.readAll('logs') as any[];
+      res.status(OK).send({
+         success: true,
+         timestamp: new Date(),
+         count: logs ? logs.length : 0,
+         logs,
+      });
+   } catch (error) {
+      await redis.disconnect();
+      res.status(error.status || INTERNAL_SERVER_ERROR).send({
+         success: false,
+         timestamp: new Date(),
+         message: error.message || 'Unexpected error occurred.',
+      });
+   }
+};
+
+export const deleteByID = async (req: Request, res: Response) => {
+   try {
+      const id = req.params.id;
+      const data = await redis.read('logs', id);
+      await redis.deleteByID('logs', id);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
          deleted: data,
+      });
+   } catch (error) {
+      await redis.disconnect();
+      res.status(error.status || INTERNAL_SERVER_ERROR).send({
+         success: false,
+         timestamp: new Date(),
+         message: error.message || 'Unexpected error occurred.',
+      });
+   }
+};
+
+export const deleteAll = async (_: Request, res: Response) => {
+   try {
+      await redis.deleteAll('logs');
+      res.status(OK).send({
+         success: true,
+         timestamp: new Date(),
+         message: 'All logs deleted.',
       });
    } catch (error) {
       await redis.disconnect();

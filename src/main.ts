@@ -4,7 +4,7 @@ import * as cors from 'cors';
 import * as helmet from 'helmet';
 import * as morganBody from 'morgan-body';
 import * as log from 'fancy-log';
-import logRoutes from './log.routes';
+import { logsRoutes, redisRoutes } from './routes';
 import * as redis from './common/redis';
 try {
     config();
@@ -12,9 +12,11 @@ try {
     app.use(cors());
     app.use(helmet());
     app.use(express.json());
+    app.use(express.urlencoded());
     morganBody(app);
 
-    app.use('/api/v01/logs', logRoutes);
+    app.use('/api/v01/redis', redisRoutes);
+    app.use('/api/v01/logs', logsRoutes);
 
     const { PORT, NODE_ENV } = process.env;
     app.listen(PORT || 10000, () => {
