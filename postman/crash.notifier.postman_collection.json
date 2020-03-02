@@ -1,0 +1,47 @@
+{
+	"info": {
+		"_postman_id": "1b64c996-d553-429e-812d-4ddac5fe66e7",
+		"name": "crash.notifier.postman",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://localhost:5000/api/v01/logs",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"application\": \"content-ui\",\n\t\"version\": \"01.01.01\",\n\t\"production\": true, \n\t\"error\": \"hello there\",\n\t\"stacktrace\": \"my trace\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/v01/logs",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"v01",
+						"logs"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}
