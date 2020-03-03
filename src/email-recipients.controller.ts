@@ -2,19 +2,20 @@ import { Request, Response } from 'express';
 import * as redis from './common/redis';
 import { INTERNAL_SERVER_ERROR, CREATED, OK } from './common/http-status';
 
+const RECIPIENTS = 'email-recipients';
+
 export const create = async (req: Request, res: Response) => {
    try {
-      const logged = req.body;
+      const saved = req.body;
       const timestamp = new Date();
-      logged.collection = 'logs',
-      logged.id = timestamp.valueOf().toString();
-      logged.created = timestamp;
-      logged.emailed = false;
-      await redis.save('logs', logged.id, logged);
+      saved.collection = RECIPIENTS,
+      saved.id = timestamp.valueOf();
+      saved.created = timestamp;
+      await redis.save(RECIPIENTS, saved.id.toString(), saved);
       res.status(CREATED).send({
          success: true,
-         timestamp: logged.created,
-         logged,
+         timestamp: saved.created,
+         saved,
       });
    } catch (error) {
       await redis.disconnect();
@@ -29,7 +30,7 @@ export const create = async (req: Request, res: Response) => {
 export const getByID = async (req: Request, res: Response) => {
    try {
       const id = req.params.id;
-      const read = await redis.read('logs', id);
+      const read = await redis.read(RECIPIENTS, id);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
@@ -46,14 +47,37 @@ export const getByID = async (req: Request, res: Response) => {
 };
 
 
-export const getAll = async (_: Request, res: Response) => {
+export const update = async (req: Request, res: Response) => {
    try {
-      const logs = await redis.readAll('logs') as any[];
+      const id = req.params.id;
+      const updates = req.body;
+      const read = await redis.read(RECIPIENTS, id);
+      const updated = { ...read, ...updates };
+      await redis.save(RECIPIENTS, id, read);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
-         count: logs ? logs.length : 0,
-         logs,
+         updated,
+      });
+   } catch (error) {
+      await redis.disconnect();
+      res.status(error.status || INTERNAL_SERVER_ERROR).send({
+         success: false,
+         timestamp: new Date(),
+         message: error.message || 'Unexpected error occurred.',
+      });
+   }
+};
+
+
+export const getAll = async (_: Request, res: Response) => {
+   try {
+      const recipients = await redis.readAll(RECIPIENTS) as any[];
+      res.status(OK).send({
+         success: true,
+         timestamp: new Date(),
+         count: recipients ? recipients.length : 0,
+         recipients,
       });
    } catch (error) {
       await redis.disconnect();
@@ -68,12 +92,12 @@ export const getAll = async (_: Request, res: Response) => {
 export const deleteByID = async (req: Request, res: Response) => {
    try {
       const id = req.params.id;
-      const data = await redis.read('logs', id);
-      await redis.deleteByID('logs', id);
+      const deleted = await redis.read(RECIPIENTS, id);
+      await redis.deleteByID(RECIPIENTS, id);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
-         deleted: data,
+         deleted,
       });
    } catch (error) {
       await redis.disconnect();
@@ -87,65 +111,11 @@ export const deleteByID = async (req: Request, res: Response) => {
 
 export const deleteAll = async (_: Request, res: Response) => {
    try {
-      await redis.deleteAll('logs');
+      await redis.deleteAll(RECIPIENTS);
       res.status(OK).send({
          success: true,
          timestamp: new Date(),
          message: 'All logs deleted.',
-      });
-   } catch (error) {
-      await redis.disconnect();
-      res.status(error.status || INTERNAL_SERVER_ERROR).send({
-         success: false,
-         timestamp: new Date(),
-         message: error.message || 'Unexpected error occurred.',
-      });
-   }
-};
-
-export const clearCache = async (_: Request, res: Response) => {
-   try {
-      await redis.clearCache();
-      res.status(OK).send({
-         success: true,
-         timestamp: new Date(),
-         message: 'Redis cache is cleared.',
-      });
-   } catch (error) {
-      await redis.disconnect();
-      res.status(error.status || INTERNAL_SERVER_ERROR).send({
-         success: false,
-         timestamp: new Date(),
-         message: error.message || 'Unexpected error occurred.',
-      });
-   }
-};
-
-export const connect = async (_: Request, res: Response) => {
-   try {
-      await redis.connect();
-      res.status(OK).send({
-         success: true,
-         timestamp: new Date(),
-         message: 'Redis is connected.',
-      });
-   } catch (error) {
-      await redis.disconnect();
-      res.status(error.status || INTERNAL_SERVER_ERROR).send({
-         success: false,
-         timestamp: new Date(),
-         message: error.message || 'Unexpected error occurred.',
-      });
-   }
-};
-
-export const disconnect = async (_: Request, res: Response) => {
-   try {
-      await redis.disconnect();
-      res.status(OK).send({
-         success: true,
-         timestamp: new Date(),
-         message: 'Redis is disconnected.',
       });
    } catch (error) {
       await redis.disconnect();

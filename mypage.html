@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Window Error Event</title>
+    <meta name="viewport" content="width=device-width">
+    <style></style>
+    <!-- -->
+</head>
+<body>
+    <h1>Window Error Events &amp; Handling</h1>
+    <p>The Window object has an Error event that lets us handle any error that happens on the page.</p> 
+    <p>Much better practice than wrapping your whole page in a try...catch block.</p>
+    
+    <!--<p><img src="" id="badImg" alt="no alt"/></p>-->
+    
+    <!--<script src="http://www.otherdomain.com/script.js" crossorigin="anonymous"></script>-->
+    
+    <script>
+        // document.addEventListener('DOMContentLoaded', () => {
+        //     let img = document.getElementById('badImg');
+        //     img.onerror = () => {
+        //         console.warn('image did not load');
+        //     }
+        // });
+        
+        window.onerror = (msg, url, line, col, err) => {
+            console.log('message: ', msg);
+            console.log('url: ', url);
+            console.log('line, col:', line, col);
+            console.error('error: ', err);
+            console.error('stack: ', err.stack);
+            console.error('name: ', err.name);
+        };
+        
+        // window.addEventListener('error', (event) => {
+        //     console.log(event.type);
+        //     console.warn(event);
+        //     // ev.preventDefault();
+        // });
+        
+        
+        asd;
+        /*try{
+            function a(){
+                referenceA.error.causing();
+            }
+            
+            function b(){
+                referenceB.error.causing();
+            }
+            
+            a();
+            
+        }catch(err){
+            console.error(err);
+        }*/
+        
+    </script>
+</body>
+</html>
