@@ -1,9 +1,9 @@
 {
-  "name": "crash-notifier",
-  "description": "Application crash and error notifier using AMQP for sending emails.",
+  "name": "crash-logger",
+  "description": "Application crash and error logger using Redis.",
   "version": "1.0.0",
   "main": "dist/main.js",
-  "author": "lem",
+  "author": "lem & jojo",
   "license": "MIT",
   "scripts": {
     "start": "node .",
